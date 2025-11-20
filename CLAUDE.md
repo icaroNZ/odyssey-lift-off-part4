@@ -831,6 +831,140 @@ Before completing a task:
 
 ---
 
+## 📖 Documentation Requirements
+
+### Mandatory Documentation for Each Stage
+
+**⚠️ CRITICAL RULE: DOCUMENT AS YOU BUILD**
+
+For every stage of development, comprehensive learning documentation must be created and maintained.
+
+### Documentation Structure
+
+```
+Docs/
+├── INDEX.md                    # Main index with links to all docs
+├── Stage-01-Foundation.md      # Stage 1 detailed documentation
+├── Stage-02-Models.md          # Stage 2 detailed documentation
+├── Stage-03-Services.md        # Stage 3 detailed documentation
+└── ... (one file per stage)
+```
+
+### Requirements for Each Stage Documentation
+
+Every stage documentation file must include:
+
+1. **Overview**
+   - What we're building in this stage
+   - Learning objectives
+   - Prerequisites
+
+2. **Key Concepts**
+   - Technical explanations
+   - Real-world analogies (when helpful)
+   - Code examples with explanations
+
+3. **Step-by-Step Implementation**
+   - Each task broken down
+   - Code snippets with line-by-line explanations
+   - Why each decision was made
+
+4. **Design Decisions & Trade-offs**
+   - Options considered
+   - Why we chose our approach
+   - Trade-offs explained
+
+5. **Interview Preparation**
+   - Common interview questions
+   - Sample answers
+   - Key talking points
+
+6. **Troubleshooting**
+   - Common errors
+   - Solutions
+   - Debugging tips
+
+7. **Summary**
+   - What we accomplished
+   - Key takeaways
+   - Connection to next stage
+
+### Main INDEX.md Requirements
+
+The index file must include:
+
+- **Project overview**: What we're building
+- **Table of contents**: Links to all stage docs
+- **Stage summaries**: 2-3 sentence summary of each stage
+- **Progress tracking**: Visual indicators of completion
+- **Quick reference**: Key concepts index
+
+### Documentation Workflow
+
+1. **Start of stage**: Create documentation file
+2. **During development**: Update with explanations as you code
+3. **End of stage**: Complete all sections
+4. **Review**: Ensure explanations are interview-ready
+5. **Commit**: Commit documentation with code
+6. **Update index**: Add stage to main index
+
+### Quality Standards for Documentation
+
+- ✅ Explain **why**, not just **what**
+- ✅ Include code examples for every concept
+- ✅ Provide analogies for complex concepts
+- ✅ Anticipate interview questions
+- ✅ Link related concepts
+- ✅ Use clear, professional language
+- ✅ Include diagrams where helpful (ASCII art is fine)
+- ✅ Keep it practical and actionable
+
+### Example Documentation Structure
+
+```markdown
+# Stage X: [Stage Name]
+
+## Overview
+[What we're building and why]
+
+## Learning Objectives
+- Objective 1
+- Objective 2
+
+## Key Concepts
+
+### Concept 1: [Name]
+**What is it?**
+[Explanation]
+
+**Why do we need it?**
+[Justification]
+
+**Code Example:**
+```csharp
+[Code]
+```
+
+**Interview Answer:**
+> "[Prepared answer]"
+
+## Implementation Steps
+[Detailed walkthrough]
+
+## Summary
+[Key takeaways]
+```
+
+### Benefits of This Approach
+
+1. **Learning Reinforcement**: Writing explanations solidifies understanding
+2. **Interview Preparation**: Ready-made answers to common questions
+3. **Knowledge Transfer**: Others can learn from your documentation
+4. **Reference Material**: Quick lookup when you forget details
+5. **Portfolio Piece**: Demonstrates communication skills
+
+---
+
 ## 📚 Additional Resources
 
 - [C# Coding Conventions](https://docs.microsoft.com/en-us/dotnet/csharp/fundamentals/coding-style/coding-conventions)
@@ -840,8 +974,8 @@ Before completing a task:
 
 ---
 
-**Document Version:** 1.0
-**Last Updated:** 2025-11-19
+**Document Version:** 1.1
+**Last Updated:** 2025-11-20
 **Author:** Claude (Senior C# & GraphQL Mentor)
 
 ---
