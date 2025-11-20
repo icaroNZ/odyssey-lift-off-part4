@@ -1415,6 +1415,525 @@ curl -X POST http://localhost:5000/graphql \
 >
 > When this test fails in CI/CD, the name tells us exactly what broke without reading code. This is critical for rapid incident response in production systems."
 
+#### Q6: "What is GraphQL and how does it differ from REST?"
+
+**Answer:**
+
+> "GraphQL is a query language for APIs and a runtime for fulfilling those queries. Unlike REST, which exposes multiple endpoints for different resources, GraphQL provides a single endpoint where clients specify exactly what data they need.
+>
+> **Key Differences:**
+>
+> **REST:**
+> ```
+> GET /api/tracks           → Get all tracks
+> GET /api/tracks/123       → Get one track
+> GET /api/tracks/123/modules → Get track's modules
+> GET /api/authors/456      → Get author
+> ```
+> Multiple requests needed to build a view.
+>
+> **GraphQL:**
+> ```graphql
+> query {
+>   track(id: "123") {
+>     title
+>     author { name photo }
+>     modules { title length }
+>   }
+> }
+> ```
+> One request, exact data needed, no over-fetching or under-fetching.
+>
+> **Advantages of GraphQL:**
+>
+> 1. **No Over-fetching:** Client gets only requested fields
+> 2. **No Under-fetching:** Can request nested data in one query
+> 3. **Strongly Typed:** Schema defines what's possible
+> 4. **Self-Documenting:** Schema is the documentation
+> 5. **Versioning Not Needed:** Add fields without breaking clients
+> 6. **Developer Experience:** GraphQL IDEs (Banana Cake Pop, GraphiQL)
+>
+> **Disadvantages of GraphQL:**
+>
+> 1. **Complexity:** More complex than simple REST
+> 2. **Caching:** HTTP caching harder than with REST
+> 3. **File Uploads:** Requires special handling
+> 4. **N+1 Problem:** Can cause performance issues (solved with DataLoaders)
+> 5. **Learning Curve:** Teams need to learn GraphQL concepts
+>
+> **When to Choose GraphQL:**
+> - Complex, nested data structures
+> - Mobile apps (minimize network requests)
+> - Rapidly evolving APIs
+> - Multiple clients with different needs
+>
+> **When REST is Better:**
+> - Simple CRUD operations
+> - File uploads/downloads
+> - Need HTTP caching
+> - Team unfamiliar with GraphQL
+>
+> In our project, we chose GraphQL because the educational content has deeply nested structures (tracks → modules, tracks → authors) and different frontends might need different subsets of data."
+
+#### Q7: "What is the GraphQL type system and why is it important?"
+
+**Answer:**
+
+> "The GraphQL type system is the core of any GraphQL API. It defines what data is available, what operations are possible, and the shape of responses. It's like a contract between client and server.
+>
+> **Scalar Types (Built-in):**
+> - `String`: Text data
+> - `Int`: 32-bit integer
+> - `Float`: Floating-point number
+> - `Boolean`: true/false
+> - `ID`: Unique identifier (serialized as String)
+>
+> **Object Types:**
+> ```graphql
+> type Track {
+>   id: ID!              # ! means non-null (required)
+>   title: String!
+>   author: Author!      # Nested object
+>   modules: [Module!]!  # Non-null list of non-null modules
+>   length: Int          # Nullable (optional)
+> }
+> ```
+>
+> **Operation Types:**
+> - `Query`: Read operations (like GET in REST)
+> - `Mutation`: Write operations (like POST/PUT/DELETE in REST)
+> - `Subscription`: Real-time updates (WebSocket-based)
+>
+> **Why It's Important:**
+>
+> 1. **Type Safety:** Client queries validated against schema at query time
+> 2. **Autocomplete:** IDEs can suggest available fields
+> 3. **Documentation:** Schema is self-documenting
+> 4. **Tooling:** Generates TypeScript types, client SDKs, etc.
+> 5. **Contract:** Client and server agree on data shape
+>
+> **In Hot Chocolate:**
+> We define types using C# classes, and Hot Chocolate generates the GraphQL schema:
+> ```csharp
+> public class Track
+> {
+>     public string Id { get; set; }      → ID!
+>     public string Title { get; set; }   → String!
+>     public int? Length { get; set; }    → Int (nullable)
+> }
+> ```
+>
+> The type system ensures clients can't request fields that don't exist and that the server returns the correct data shape. It's GraphQL's superpower."
+
+#### Q8: "What is a GraphQL resolver and how does it work?"
+
+**Answer:**
+
+> "A resolver is a function that fetches the data for a specific field in the GraphQL schema. Every field in your schema has a corresponding resolver, though many are implicit.
+>
+> **Resolver Function Signature:**
+> ```csharp
+> public async Task<Track> GetTrack(
+>     string id,                    // Arguments from query
+>     [Parent] Track parent,        // Parent object (for nested resolvers)
+>     [Service] ITrackService svc   // Dependency injection
+> )
+> {
+>     return await svc.GetTrackAsync(id);
+> }
+> ```
+>
+> **How Resolution Works:**
+>
+> **Query:**
+> ```graphql
+> query {
+>   track(id: "t_01") {
+>     title
+>     author {
+>       name
+>     }
+>   }
+> }
+> ```
+>
+> **Resolution Steps:**
+> 1. **Query.track** resolver runs → returns Track object
+> 2. **Track.title** resolver runs (implicit, returns property value)
+> 3. **Track.author** resolver runs → fetches Author
+> 4. **Author.name** resolver runs (implicit, returns property value)
+>
+> **Implicit vs. Explicit Resolvers:**
+>
+> **Implicit (automatic):**
+> ```csharp
+> public class Track
+> {
+>     public string Title { get; set; }  // Hot Chocolate creates resolver automatically
+> }
+> ```
+>
+> **Explicit (custom logic):**
+> ```csharp
+> [ObjectType(typeof(Track))]
+> public class TrackType
+> {
+>     [GraphQLName("author")]
+>     public async Task<Author> GetAuthor(
+>         [Parent] Track track,
+>         [Service] ITrackService svc)
+>     {
+>         // Custom logic to fetch author
+>         return await svc.GetAuthorAsync(track.AuthorId);
+>     }
+> }
+> ```
+>
+> **Why Explicit Resolvers?**
+> - Fetch data from external sources (APIs, databases)
+> - Transform data before returning
+> - Implement authorization logic
+> - Optimize with DataLoaders (batch requests)
+>
+> **Performance Note:**
+> Resolvers can create N+1 problems if not careful:
+> - Fetching 10 tracks → fine (1 query)
+> - Each track fetches author → 10 queries (N+1 problem)
+> - Solution: DataLoaders (Stage 6)
+>
+> Resolvers are the bridge between your GraphQL schema and your data sources. They give you complete control over how data is fetched and returned."
+
+#### Q9: "What's the difference between GraphQL queries and mutations?"
+
+**Answer:**
+
+> "Queries and mutations are the two primary operations in GraphQL, conceptually similar to GET vs POST/PUT/DELETE in REST.
+>
+> **Queries (Read Operations):**
+>
+> **Purpose:** Fetch data without side effects
+>
+> **Example:**
+> ```graphql
+> query GetTrack {
+>   track(id: "t_01") {
+>     title
+>     length
+>   }
+> }
+> ```
+>
+> **Characteristics:**
+> - Safe to execute multiple times (idempotent)
+> - Can be cached
+> - Executed in parallel (for performance)
+> - Should not modify data
+>
+> **Implementation:**
+> ```csharp
+> [Query]
+> public async Task<Track> GetTrack(
+>     string id,
+>     [Service] ITrackService trackService)
+> {
+>     return await trackService.GetTrackAsync(id);
+> }
+> ```
+>
+> **Mutations (Write Operations):**
+>
+> **Purpose:** Modify data (create, update, delete)
+>
+> **Example:**
+> ```graphql
+> mutation IncrementViews {
+>   incrementTrackViews(id: "t_01") {
+>     code
+>     success
+>     message
+>     track {
+>       numberOfViews
+>     }
+>   }
+> }
+> ```
+>
+> **Characteristics:**
+> - Causes side effects (changes data)
+> - Should NOT be cached
+> - Executed serially (one after another)
+> - Should return confirmation of success/failure
+>
+> **Implementation:**
+> ```csharp
+> [Mutation]
+> public async Task<IncrementTrackViewsResponse> IncrementTrackViews(
+>     string id,
+>     [Service] ITrackService trackService)
+> {
+>     try
+>     {
+>         var track = await trackService.IncrementViewsAsync(id);
+>         return new IncrementTrackViewsResponse
+>         {
+>             Code = 200,
+>             Success = true,
+>             Message = "Views incremented",
+>             Track = track
+>         };
+>     }
+>     catch (Exception ex)
+>     {
+>         return new IncrementTrackViewsResponse
+>         {
+>             Code = 500,
+>             Success = false,
+>             Message = ex.Message,
+>             Track = null
+>         };
+>     }
+> }
+> ```
+>
+> **Key Difference - Execution Order:**
+>
+> **Queries (parallel):**
+> ```graphql
+> query {
+>   track1: track(id: "t_01") { title }
+>   track2: track(id: "t_02") { title }
+>   # Both execute simultaneously
+> }
+> ```
+>
+> **Mutations (serial):**
+> ```graphql
+> mutation {
+>   increment1: incrementTrackViews(id: "t_01") { code }
+>   increment2: incrementTrackViews(id: "t_02") { code }
+>   # increment1 completes, then increment2 runs
+> }
+> ```
+>
+> This serial execution prevents race conditions when mutations depend on each other.
+>
+> **Best Practice - Mutation Response Types:**
+> Always return a response object with:
+> - `code`: HTTP-style status code
+> - `success`: Boolean indicating success
+> - `message`: Human-readable message
+> - `data`: The modified object (or null on failure)
+>
+> This pattern makes error handling consistent and predictable for clients."
+
+#### Q10: "When would you choose GraphQL over REST, and vice versa?"
+
+**Answer:**
+
+> "The choice between GraphQL and REST depends on your specific use case. Neither is universally better—they solve different problems.
+>
+> **Choose GraphQL When:**
+>
+> **1. Complex, Nested Data Structures**
+> ```graphql
+> # One request for deeply nested data
+> query {
+>   track(id: "t_01") {
+>     title
+>     author { name photo bio }
+>     modules {
+>       title
+>       content
+>       videoUrl
+>     }
+>   }
+> }
+> ```
+> In REST, this might require 3+ requests.
+>
+> **2. Multiple Client Types**
+> - Mobile app needs: title, thumbnail (minimize data)
+> - Web app needs: full track details
+> - Same GraphQL endpoint serves both with different queries
+>
+> **3. Rapid Frontend Development**
+> - No waiting for backend to create new endpoints
+> - Frontend can request exact data needed
+> - Reduces API changes and versioning
+>
+> **4. Bandwidth-Constrained Environments**
+> - Mobile apps on slow networks
+> - IoT devices
+> - Minimize over-fetching
+>
+> **5. Aggregating Multiple Data Sources**
+> - Single GraphQL layer over multiple REST APIs
+> - Microservices architecture
+> - Legacy system integration
+>
+> **Choose REST When:**
+>
+> **1. Simple CRUD Operations**
+> ```
+> GET    /api/tracks      # List tracks
+> POST   /api/tracks      # Create track
+> PUT    /api/tracks/123  # Update track
+> DELETE /api/tracks/123  # Delete track
+> ```
+> REST is simpler for straightforward operations.
+>
+> **2. File Uploads/Downloads**
+> - REST handles multipart/form-data naturally
+> - GraphQL requires special handling (multipart spec)
+> - File streaming is more straightforward
+>
+> **3. HTTP Caching Requirements**
+> ```
+> GET /api/tracks/123
+> Cache-Control: max-age=3600
+> ETag: "abc123"
+> ```
+> REST leverages HTTP caching infrastructure. GraphQL typically uses one POST endpoint, making HTTP caching harder.
+>
+> **4. Team Familiarity**
+> - Team experienced with REST
+> - Limited time for learning
+> - Straightforward requirements
+>
+> **5. Public APIs with Simple Data**
+> - Weather API: GET /weather?city=NYC
+> - Currency API: GET /rates?base=USD
+> - REST is more predictable for simple, public APIs
+>
+> **Real-World Hybrid Approach:**
+>
+> Many organizations use both:
+> ```
+> /graphql       → Complex queries, nested data
+> /api/upload    → File uploads (REST)
+> /api/download  → File downloads (REST)
+> /api/webhook   → Webhooks (REST)
+> ```
+>
+> **For Catstronauts:**
+>
+> We chose GraphQL because:
+> 1. **Nested data:** Tracks → Modules, Tracks → Authors
+> 2. **Multiple clients:** Web, potentially mobile
+> 3. **Evolving schema:** Adding fields without versioning
+> 4. **Learning platform:** Great for educational content exploration
+>
+> If Catstronauts were just a simple track list with no nesting, REST might be simpler. But the relational nature of educational content (courses, lessons, authors) makes GraphQL a better fit.
+>
+> **Interview Tip:** Show you understand trade-offs rather than claiming one is universally better. The best answer is 'it depends on your requirements.'"
+
+#### Q11: "What is the N+1 problem in GraphQL and how do you solve it?"
+
+**Answer:**
+
+> "The N+1 problem is a common performance pitfall in GraphQL where fetching a list of items triggers additional queries for each item's related data.
+>
+> **The Problem:**
+>
+> **Query:**
+> ```graphql
+> query {
+>   tracksForHome {      # Returns 10 tracks
+>     title
+>     author {           # For each track, fetch its author
+>       name
+>     }
+>   }
+> }
+> ```
+>
+> **Naive Resolver Implementation:**
+> ```csharp
+> // Query resolver
+> public async Task<List<Track>> GetTracksForHome([Service] ITrackService svc)
+> {
+>     return await svc.GetTracksAsync();  // 1 query
+> }
+>
+> // Field resolver (runs for EACH track)
+> public async Task<Author> GetAuthor([Parent] Track track, [Service] ITrackService svc)
+> {
+>     return await svc.GetAuthorAsync(track.AuthorId);  // N queries (10x)
+> }
+> ```
+>
+> **Database Calls:**
+> ```
+> 1. SELECT * FROM tracks              (1 query)
+> 2. SELECT * FROM authors WHERE id=1  (query 1)
+> 3. SELECT * FROM authors WHERE id=2  (query 2)
+> 4. SELECT * FROM authors WHERE id=3  (query 3)
+> ... (10 total author queries)
+>
+> Total: 1 + 10 = 11 queries (N+1 problem!)
+> ```
+>
+> For 100 tracks → 101 queries. For 1000 tracks → 1001 queries. This kills performance.
+>
+> **The Solution: DataLoaders**
+>
+> DataLoaders batch multiple requests into a single query:
+>
+> ```csharp
+> // DataLoader implementation
+> public class AuthorDataLoader : BatchDataLoader<string, Author>
+> {
+>     private readonly IAuthorService _service;
+>
+>     protected override async Task<IReadOnlyDictionary<string, Author>> LoadBatchAsync(
+>         IReadOnlyList<string> authorIds,
+>         CancellationToken ct)
+>     {
+>         // Batch fetch ALL authors in ONE query
+>         var authors = await _service.GetAuthorsByIdsAsync(authorIds);
+>         return authors.ToDictionary(a => a.Id);
+>     }
+> }
+>
+> // Updated field resolver
+> public async Task<Author> GetAuthor(
+>     [Parent] Track track,
+>     AuthorDataLoader authorLoader)  // Use DataLoader instead of service
+> {
+>     return await authorLoader.LoadAsync(track.AuthorId);
+> }
+> ```
+>
+> **With DataLoader:**
+> ```
+> 1. SELECT * FROM tracks                              (1 query)
+> 2. SELECT * FROM authors WHERE id IN (1,2,3,...,10)  (1 batched query)
+>
+> Total: 2 queries (problem solved!)
+> ```
+>
+> **How DataLoaders Work:**
+>
+> 1. **Collection Phase:** As resolvers execute, DataLoader collects all requested IDs
+> 2. **Batching:** DataLoader waits for current execution tick to complete
+> 3. **Single Fetch:** Makes ONE request with all IDs
+> 4. **Distribution:** Returns individual results to waiting resolvers
+>
+> **Benefits:**
+> - 🚀 Drastically fewer database/API calls
+> - 📦 Automatic request batching
+> - 💾 Built-in caching (within single request)
+> - 🎯 Maintains resolver simplicity
+>
+> **When to Use DataLoaders:**
+> - Fetching related entities (authors, modules, etc.)
+> - Aggregating data from external APIs
+> - Any N+1 scenario
+>
+> We'll implement DataLoaders in Stage 6. They're essential for production GraphQL APIs.
+>
+> **Interview Tip:** Mentioning N+1 and DataLoaders shows you understand GraphQL performance implications, not just basic query writing."
+
 ---
 
 ## Summary
