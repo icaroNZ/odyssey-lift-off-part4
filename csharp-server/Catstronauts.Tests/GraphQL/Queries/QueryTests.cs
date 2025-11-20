@@ -1,5 +1,7 @@
 using FluentAssertions;
+using GreenDonut;
 using NSubstitute;
+using Catstronauts.GraphQL.GraphQL.DataLoaders;
 using Catstronauts.GraphQL.GraphQL.Queries;
 using Catstronauts.GraphQL.Models;
 using Catstronauts.GraphQL.Services;
@@ -202,10 +204,12 @@ public class QueryTests
             Photo = "https://example.com/henri.jpg"
         };
         mockService.GetAuthorAsync("cat-1").Returns(expectedAuthor);
+
+        var authorDataLoader = new AuthorDataLoader(mockService, AutoBatchScheduler.Default);
         var query = new Query();
 
         // Act
-        var result = await query.GetAuthor(track, mockService);
+        var result = await query.GetAuthor(track, authorDataLoader);
 
         // Assert
         result.Should().NotBeNull();
@@ -225,10 +229,12 @@ public class QueryTests
             AuthorId = "nonexistent"
         };
         mockService.GetAuthorAsync("nonexistent").Returns((Author?)null);
+
+        var authorDataLoader = new AuthorDataLoader(mockService, AutoBatchScheduler.Default);
         var query = new Query();
 
         // Act
-        var result = await query.GetAuthor(track, mockService);
+        var result = await query.GetAuthor(track, authorDataLoader);
 
         // Assert
         result.Should().BeNull();
@@ -248,10 +254,12 @@ public class QueryTests
         };
         mockService.GetAuthorAsync("specific-author-id")
             .Returns(new Author { Id = "specific-author-id", Name = "Test Author" });
+
+        var authorDataLoader = new AuthorDataLoader(mockService, AutoBatchScheduler.Default);
         var query = new Query();
 
         // Act
-        await query.GetAuthor(track, mockService);
+        await query.GetAuthor(track, authorDataLoader);
 
         // Assert - Verify the correct AuthorId was used
         await mockService.Received(1).GetAuthorAsync("specific-author-id");
@@ -292,10 +300,12 @@ public class QueryTests
             }
         };
         mockService.GetTrackModulesAsync("c_0").Returns(expectedModules);
+
+        var moduleDataLoader = new ModuleDataLoader(mockService, AutoBatchScheduler.Default);
         var query = new Query();
 
         // Act
-        var result = await query.GetModules(track, mockService);
+        var result = await query.GetModules(track, moduleDataLoader);
 
         // Assert
         result.Should().NotBeNull();
@@ -316,10 +326,12 @@ public class QueryTests
             AuthorId = "cat-1"
         };
         mockService.GetTrackModulesAsync("c_0").Returns(new List<Module>());
+
+        var moduleDataLoader = new ModuleDataLoader(mockService, AutoBatchScheduler.Default);
         var query = new Query();
 
         // Act
-        var result = await query.GetModules(track, mockService);
+        var result = await query.GetModules(track, moduleDataLoader);
 
         // Assert
         result.Should().NotBeNull();
@@ -340,10 +352,12 @@ public class QueryTests
         };
         mockService.GetTrackModulesAsync("specific-track-id")
             .Returns(new List<Module>());
+
+        var moduleDataLoader = new ModuleDataLoader(mockService, AutoBatchScheduler.Default);
         var query = new Query();
 
         // Act
-        await query.GetModules(track, mockService);
+        await query.GetModules(track, moduleDataLoader);
 
         // Assert - Verify the correct Track ID was used
         await mockService.Received(1).GetTrackModulesAsync("specific-track-id");
@@ -405,14 +419,14 @@ public class QueryTests
     }
 
     [Fact]
-    public void GetModules_ReturnsTaskOfListOfModule()
+    public void GetModules_ReturnsTaskOfIReadOnlyListOfModule()
     {
         // Arrange
         var method = typeof(Query).GetMethod(nameof(Query.GetModules));
 
         // Assert
         method.Should().NotBeNull();
-        method!.ReturnType.Should().Be(typeof(Task<List<Module>>));
+        method!.ReturnType.Should().Be(typeof(Task<IReadOnlyList<Module>>));
     }
 
     #endregion
